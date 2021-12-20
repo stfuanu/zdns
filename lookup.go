@@ -81,7 +81,7 @@ func makeName(name, prefix, nameOverride string) (string, bool) {
 	}
 	trimmedName := strings.TrimSuffix(name, ".")
 	if prefix == "" {
-		return trimmedName,  name != trimmedName
+		return trimmedName, name != trimmedName
 	} else {
 		return strings.Join([]string{prefix, trimmedName}, ""), true
 	}
@@ -101,6 +101,7 @@ func doLookup(g GlobalLookupFactory, gc *GlobalConf, input <-chan interface{}, o
 		var status Status
 		var err error
 		l, err := f.MakeLookup()
+
 		if err != nil {
 			log.Fatal("Unable to build lookup instance", err)
 		}

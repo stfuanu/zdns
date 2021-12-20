@@ -66,6 +66,7 @@ func main() {
 	flags.IntVar(&gc.CacheSize, "cache-size", 10000, "how many items can be stored in internal recursive cache")
 	flags.BoolVar(&gc.TCPOnly, "tcp-only", false, "Only perform lookups over TCP")
 	flags.BoolVar(&gc.UDPOnly, "udp-only", false, "Only perform lookups over UDP")
+	flags.BoolVar(&gc.Nxtoo, "nx", false, "Only perform lookups over TCP")
 	flags.BoolVar(&gc.NameServerMode, "name-server-mode", false, "Treats input as nameservers to query with a static query rather than queries to send to a static name server")
 	servers_string := flags.String("name-servers", "", "List of DNS servers to use. Can be passed as comma-delimited string or via @/path/to/file. If no port is specified, defaults to 53.")
 	localaddr_string := flags.String("local-addr", "", "comma-delimited list of local addresses to use")
@@ -75,6 +76,7 @@ func main() {
 	iterationTimeout := flags.Int("iteration-timeout", 4, "timeout for resolving a single iteration in an iterative query")
 	class_string := flags.String("class", "INET", "DNS class to query. Options: INET, CSNET, CHAOS, HESIOD, NONE, ANY. Default: INET.")
 	nanoSeconds := flags.Bool("nanoseconds", false, "Use nanosecond resolution timestamps")
+
 	// allow module to initialize and add its own flags before we parse
 	if len(os.Args) < 2 {
 		log.Fatal("No lookup module specified. Valid modules: ", zdns.ValidlookupsString(), ".")

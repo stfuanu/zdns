@@ -70,6 +70,7 @@ type GlobalLookupFactory struct {
 	DNSType        uint16
 	DNSClass       uint16
 	BlacklistPath  string
+	nx2            *bool
 	Blacklist      *blacklist.Blacklist
 	BlMu           sync.Mutex
 }
@@ -140,6 +141,7 @@ func (s *RoutineLookupFactory) Initialize(c *zdns.GlobalConf) {
 	} else {
 		s.Timeout = c.Timeout
 	}
+	s.Factory.nx2 = &c.Nxtoo
 
 	if s.Factory == nil {
 		panic("null factory")
@@ -215,11 +217,11 @@ func (s *Lookup) Initialize(nameServer string, dnsType uint16, dnsClass uint16, 
 }
 
 func (s *Lookup) doLookup(q Question, nameServer string, recursive bool) (Result, zdns.Status, error) {
-	return DoLookupWorker(s.Factory.Client, s.Factory.TCPClient, s.Conn, q, nameServer, recursive)
+	return DoLookupWorker(s.Factory.Client, s.Factory.TCPClient, s.Conn, q, nameServer, recursive, *s.Factory.Factory.nx2)
 }
 
 // Expose the inner logic so other tools can use it
-func DoLookupWorker(udp *dns.Client, tcp *dns.Client, conn *dns.Conn, q Question, nameServer string, recursive bool) (Result, zdns.Status, error) {
+func DoLookupWorker(udp *dns.Client, tcp *dns.Client, conn *dns.Conn, q Question, nameServer string, recursive bool, nx2 bool) (Result, zdns.Status, error) {
 	res := Result{Answers: []interface{}{}, Authorities: []interface{}{}, Additional: []interface{}{}}
 	res.Resolver = nameServer
 
@@ -238,7 +240,7 @@ func DoLookupWorker(udp *dns.Client, tcp *dns.Client, conn *dns.Conn, q Question
 		// if record comes back truncated, but we have a TCP connection, try again with that
 		if r != nil && (r.Truncated || r.Rcode == dns.RcodeBadTrunc) {
 			if tcp != nil {
-				return DoLookupWorker(nil, tcp, conn, q, nameServer, recursive)
+				return DoLookupWorker(nil, tcp, conn, q, nameServer, recursive, nx2)
 			} else {
 				return res, zdns.STATUS_TRUNCATED, err
 			}
@@ -261,8 +263,11 @@ func DoLookupWorker(udp *dns.Client, tcp *dns.Client, conn *dns.Conn, q Question
 	if err != nil || r == nil {
 		return res, zdns.STATUS_ERROR, err
 	}
-	if r.Rcode != dns.RcodeSuccess {
-		return res, TranslateMiekgErrorCode(r.Rcode), nil
+	// fmt.Println(r.Rcode, nx2)
+	if r.Rcode != dns.RcodeSuccess { //RcodeNameError
+		if !nx2 && r.Rcode != dns.RcodeNameError {
+			return res, TranslateMiekgErrorCode(r.Rcode), nil
+		}
 	}
 
 	res.Flags.Response = r.Response
@@ -281,19 +286,21 @@ func DoLookupWorker(udp *dns.Client, tcp *dns.Client, conn *dns.Conn, q Question
 			res.Answers = append(res.Answers, inner)
 		}
 	}
-	for _, ans := range r.Extra {
-		inner := ParseAnswer(ans)
-		if inner != nil {
-			res.Additional = append(res.Additional, inner)
+	if r.Rcode != 3 {
+		for _, ans := range r.Extra {
+			inner := ParseAnswer(ans)
+			if inner != nil {
+				res.Additional = append(res.Additional, inner)
+			}
+		}
+		for _, ans := range r.Ns {
+			inner := ParseAnswer(ans)
+			if inner != nil {
+				res.Authorities = append(res.Authorities, inner)
+			}
 		}
 	}
-	for _, ans := range r.Ns {
-		inner := ParseAnswer(ans)
-		if inner != nil {
-			res.Authorities = append(res.Authorities, inner)
-		}
-	}
-	return res, zdns.STATUS_NOERROR, nil
+	return res, TranslateMiekgErrorCode(r.Rcode), nil
 }
 
 func (s *Lookup) tracedRetryingLookup(q Question, nameServer string, recursive bool) (Result, zdns.Trace, zdns.Status, error) {

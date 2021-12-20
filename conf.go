@@ -43,6 +43,7 @@ type GlobalConf struct {
 	NameServers          []string
 	TCPOnly              bool
 	UDPOnly              bool
+	Nxtoo                bool
 	LocalAddrSpecified   bool
 	LocalAddrs           []net.IP
 
