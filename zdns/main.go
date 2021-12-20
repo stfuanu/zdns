@@ -66,7 +66,7 @@ func main() {
 	flags.IntVar(&gc.CacheSize, "cache-size", 10000, "how many items can be stored in internal recursive cache")
 	flags.BoolVar(&gc.TCPOnly, "tcp-only", false, "Only perform lookups over TCP")
 	flags.BoolVar(&gc.UDPOnly, "udp-only", false, "Only perform lookups over UDP")
-	flags.BoolVar(&gc.Nxtoo, "nx", false, "Only perform lookups over TCP")
+	flags.BoolVar(&gc.Nxtoo, "nx", false, "Include Answers from NXDOMAINs Too")
 	flags.BoolVar(&gc.NameServerMode, "name-server-mode", false, "Treats input as nameservers to query with a static query rather than queries to send to a static name server")
 	servers_string := flags.String("name-servers", "", "List of DNS servers to use. Can be passed as comma-delimited string or via @/path/to/file. If no port is specified, defaults to 53.")
 	localaddr_string := flags.String("local-addr", "", "comma-delimited list of local addresses to use")
